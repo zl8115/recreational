@@ -25,19 +25,18 @@ def get_middle_line_part_numbers(prev_line: str, cur_line: str, next_line: str) 
                 if is_symbol(bottom_char):
                     is_part_number = True
                     break
-            if num_start > 0 and is_symbol(cur_line[num_start - 1]):
+
+            if is_symbol(cur_line[left_index]):
                 is_part_number = True
                 
-            if num_end < len(cur_line) and is_symbol(cur_line[num_end]):
+            if is_symbol(cur_line[right_index - 1]):
                 is_part_number = True
                 
             if is_part_number:
                 number = cur_line[num_start:num_end]
                 acc_list.append(int(number))
-            if ii == num_end:
-                ii += 1
-            else:
-                ii = num_end
+
+            ii = num_end
         else:
             ii += 1
     return acc_list
@@ -49,14 +48,14 @@ def solve_p1():
     line_number = 0
     for line in yield_next_input_line():
         acc_list = get_middle_line_part_numbers(prev_prev_line, prev_line, line)
-        print(f"Line {line_number}: {acc_list}")
+        # print(f"Line {line_number}: {acc_list}")
         acc += sum(acc_list)
         prev_prev_line = prev_line
         prev_line = line
         line_number += 1
 
     acc_list = get_middle_line_part_numbers(prev_prev_line, prev_line, "." * 140)
-    print(f"Line {line_number}: {acc_list}")
+    # print(f"Line {line_number}: {acc_list}")
     acc += sum(acc_list)    
     print(acc)
 
@@ -107,14 +106,14 @@ def solve_p2():
     line_number = 0
     for line in yield_next_input_line():
         gear_ratios = get_middle_line_gear_ratios(prev_prev_line, prev_line, line)
-        print(f"Line {line_number}: {gear_ratios}")
+        # print(f"Line {line_number}: {gear_ratios}")
         acc += sum([ratio[0]*ratio[1] for ratio in gear_ratios])
         prev_prev_line = prev_line
         prev_line = line
         line_number += 1
 
     gear_ratios = get_middle_line_gear_ratios(prev_prev_line, prev_line, "." * 140)
-    print(f"Line {line_number}: {gear_ratios}")
+    # print(f"Line {line_number}: {gear_ratios}")
     acc += sum([ratio[0]*ratio[1] for ratio in gear_ratios])
     print(acc)
 
