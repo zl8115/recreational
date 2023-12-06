@@ -76,14 +76,18 @@ class Range:
         else:
             return Range(max_start, min_end)
         
+    def offset_by(self, offset: int) -> Range:
+        new_start = self.start + offset
+        new_end = self.end + offset
+        return Range(new_start, new_end)
+        
     def ltrim(self, new_start: int) -> Optional[Range]:
         if new_start > self.end:
-            return None
-        
+            return None        
         return Range(new_start, self.end)
     
     def rtrim(self, new_end: int) -> Optional[Range]:
-        if new_end < self.start:
+        if new_end > self.start:
             return None
         return Range(self.start, new_end)
     
@@ -92,12 +96,17 @@ class Range:
         left_remainder = None
         right_remainder = None
         if overlap:
-            left_remainder = self.rtrim(overlap.start)
-            right_remainder = self.ltrim(overlap.end)
+            left_remainder = self.rtrim(overlap.start - 1)
+            right_remainder = self.ltrim(overlap.end + 1)
+        else:
+            left_remainder = self
         return (left_remainder, overlap, right_remainder)
     
     def __hash__(self):
         return hash(tuple([self.start, self.end]))
+    
+    def __repr__(self):
+        return str(tuple([self.start, self.end]))
 
 def parse_seeds_range_line(line: str) -> list[Range]:
     seeds_ranges = list()
@@ -107,32 +116,48 @@ def parse_seeds_range_line(line: str) -> list[Range]:
     return seeds_ranges
 
 def map_source_ranges_to_destination(ranges: list[Range], destination_map: dict[Range]):
-    source_value = seed
+    lookup_ranges = ranges
+    mapped_ranges = list()
+    for range, offset in destination_map.items():
+        remaining_lookup_ranges = list()
+        for lookup_range in lookup_ranges:
+            left_remainder, overlap, right_remainder = lookup_range.split_overlap(range)
+            if left_remainder:
+                remaining_lookup_ranges.append(left_remainder)
+            if overlap:
+                mapped_ranges.append(overlap.offset_by(offset))
+            if right_remainder:
+                remaining_lookup_ranges.append(right_remainder)
+        
+        ranges = remaining_lookup_ranges
+
+    # mapped_ranges += remaining_lookup_ranges # Exclude unmapped ones because... Apparently that's the trick?
+    return mapped_ranges
+
+def get_ranges_of_seed_locations(seed_ranges: list[Range], mapping_dict: map):
+    source_ranges = seed_ranges
     source_key = "seed"
 
     conversion_path = list()
-    conversion_path.append(f"{source_key}: {source_value}")
+    conversion_path.append(f"{source_key}: {source_ranges}")
     while destination_key := mapping_dict["destinations"].get(source_key):
-        destination_value = source_value
-        for value_range, offset in mapping_dict[source_key].items():
-            if value_range[0] <= source_value and source_value <= value_range[1]:
-                destination_value = source_value + offset
+        destination_ranges = map_source_ranges_to_destination(source_ranges, mapping_dict[source_key])
         
         source_key = destination_key
-        source_value = destination_value
-        conversion_path.append(f"{destination_key}: {destination_value}")
-    # print(", ".join(conversion_path))
-    return source_value
+        source_ranges = destination_ranges
+        conversion_path.append(f"{destination_key}: {destination_ranges}")
+    # print("\n".join(conversion_path))
+    return source_ranges
 
 def solve_p2():
     mapping_dict = parse_input_mapping(seeds_is_range_instead_of_list=True)
-    pprint.pprint(mapping_dict["seeds"])
-    return 
-    # get_seed_location(mapping_dict["seeds"][0], mapping_dict)
-    locations = [get_seed_location(seed, mapping_dict) for seed in mapping_dict["seeds"]]
-    minimum_loc = min(locations)
-    # print(locations, minimum_loc)
+    # pprint.pprint(mapping_dict)
+    location_ranges = get_ranges_of_seed_locations(mapping_dict["seeds"], mapping_dict)
+    print(location_ranges)
+    minimum_loc = min([r.start for r in location_ranges])
     print(minimum_loc)
+
+# 2008785
 
 def yield_next_input_line() -> str:
     with open(r"input.txt", "r") as in_file:
